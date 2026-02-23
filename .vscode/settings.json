@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /Users/kusano/workspace/server && dotnet add package Microsoft\\.EntityFrameworkCore\\.SqlServer && dotnet add package Microsoft\\.EntityFrameworkCore\\.Tools && dotnet restore$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
