@@ -6,21 +6,18 @@ on:
 
 jobs:
   build-and-deploy:
+
+    # Use a Docker container with Flutter SDK to avoid runner setup issues
     runs-on: ubuntu-latest
+    container:
+      image: docker://cirrusci/flutter:3.10.6
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Flutter (alternative)
-        uses: flutter-actions/setup-flutter@v1
-        with:
-          sdk: '3.10.6'
-          channel: 'stable'
-          cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build web
+      - name: Build web (in container)
         run: flutter build web --release
 
       - name: Deploy to GitHub Pages
