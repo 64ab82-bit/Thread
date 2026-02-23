@@ -33,6 +33,20 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Editor settings
+/.vscode/
+
+# macOS
+.DS_Store
+
+# dotnet
+/server/bin/
+/server/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
 # Symbolication related
 app.*.symbols
 
