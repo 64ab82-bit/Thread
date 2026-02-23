@@ -8,6 +8,14 @@ This project is a starting point for a Flutter application.
 
 A few resources to get you started if this is your first Flutter project:
 
+## Deployment
+
+- Push to `main` triggers GitHub Actions workflow: `.github/workflows/deploy.yml`
+- The Flutter web app is deployed to GitHub Pages automatically
+- Public URL: https://64ab82-bit.github.io/Thread/
+
+If this URL returns 404 initially, open repository Settings > Pages and ensure Source is set to GitHub Actions.
+
 ## CI re-run
 
 Triggering workflow runs by pushing small commits to verify CI status.
