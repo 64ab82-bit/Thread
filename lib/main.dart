@@ -3,7 +3,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-const _apiBaseUrl = 'http://localhost:5001';
+const _apiBaseUrlFromEnv = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+
+String get _apiBaseUrl {
+  if (_apiBaseUrlFromEnv.isNotEmpty) {
+    return _apiBaseUrlFromEnv;
+  }
+  return 'http://localhost:5001';
+}
 
 void main() {
   runApp(const BbsApp());
