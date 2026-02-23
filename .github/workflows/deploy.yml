@@ -10,7 +10,7 @@ jobs:
     # Use a Docker container with Flutter SDK to avoid runner setup issues
     runs-on: ubuntu-latest
     container:
-      image: docker://cirrusci/flutter:3.10.6
+      image: docker://cirrusci/flutter:latest
     steps:
       - uses: actions/checkout@v4
 
