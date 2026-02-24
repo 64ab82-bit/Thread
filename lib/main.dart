@@ -125,6 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _pwController,
                     decoration: const InputDecoration(labelText: 'パスワード'),
                     obscureText: true,
+                    onSubmitted: (_) => _submit(),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 10),
@@ -167,7 +168,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _idController = TextEditingController();
   final _pwController = TextEditingController();
   final _displayNameController = TextEditingController();
-  final _avatarController = TextEditingController();
 
   bool _loading = false;
   bool? _idAvailable;
@@ -209,7 +209,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final username = _idController.text.trim();
     final password = _pwController.text.trim();
     final displayName = _displayNameController.text.trim();
-    final avatarUrl = _avatarController.text.trim();
 
     if (username.isEmpty || password.isEmpty) {
       setState(() {
@@ -236,7 +235,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'username': username,
           'password': password,
           'displayName': displayName,
-          'avatarUrl': avatarUrl,
+          'avatarUrl': '',
         }),
       ).timeout(_requestTimeout);
 
@@ -314,11 +313,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextField(
                     controller: _displayNameController,
                     decoration: const InputDecoration(labelText: '表示名'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _avatarController,
-                    decoration: const InputDecoration(labelText: 'プロフィール画像URL'),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 10),
@@ -698,10 +692,11 @@ class _BbsHomePageState extends State<BbsHomePage> {
                           itemCount: _threads.length,
                           itemBuilder: (context, index) {
                             final item = _threads[index];
+                            final commentCount = (item['comments'] as List?)?.length ?? 0;
                             return ListTile(
                               selected: _selectedThread == index,
                               title: Text('${item['title']}'),
-                              subtitle: Text('${item['category']}  ${_formatDateTime(item['createdAt'] as DateTime)}'),
+                              subtitle: Text('[${item['category']}] $commentCount件  ${_formatDateTime(item['createdAt'] as DateTime)}'),
                               onTap: () {
                                 setState(() => _selectedThread = index);
                               },
@@ -751,12 +746,6 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                               isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            if (!isMe)
-                                              _AvatarWidget(
-                                                displayName: c['userName']?.toString() ?? 'U',
-                                                avatarUrl: c['avatarUrl']?.toString() ?? '',
-                                              ),
-                                            const SizedBox(width: 8),
                                             Flexible(
                                               child: Container(
                                                 padding: const EdgeInsets.all(10),
@@ -835,13 +824,6 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                                 ),
                                               ),
                                             ),
-                                            if (isMe) ...[
-                                              const SizedBox(width: 8),
-                                              _AvatarWidget(
-                                                displayName: c['userName']?.toString() ?? 'U',
-                                                avatarUrl: c['avatarUrl']?.toString() ?? '',
-                                              ),
-                                            ],
                                           ],
                                         ),
                                       ),
@@ -904,25 +886,6 @@ class _BbsHomePageState extends State<BbsHomePage> {
   }
 }
 
-class _AvatarWidget extends StatelessWidget {
-  const _AvatarWidget({required this.displayName, required this.avatarUrl});
-
-  final String displayName;
-  final String avatarUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasUrl = avatarUrl.trim().isNotEmpty;
-    final initial = displayName.isNotEmpty ? displayName.characters.first : 'U';
-
-    return CircleAvatar(
-      radius: 16,
-      backgroundImage: hasUrl ? NetworkImage(avatarUrl) : null,
-      child: hasUrl ? null : Text(initial),
-    );
-  }
-}
-
 class _ReactionChip extends StatelessWidget {
   const _ReactionChip({required this.label, required this.count, required this.onTap});
 
@@ -959,14 +922,12 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _nameController;
-  late TextEditingController _avatarController;
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.user['displayName']?.toString() ?? '');
-    _avatarController = TextEditingController(text: widget.user['avatarUrl']?.toString() ?? '');
   }
 
   Future<void> _save() async {
@@ -975,7 +936,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final body = jsonEncode({
       'id': widget.user['id'],
       'displayName': _nameController.text.trim(),
-      'avatarUrl': _avatarController.text.trim(),
+      'avatarUrl': '',
     });
 
     try {
@@ -1017,11 +978,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: '表示名'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _avatarController,
-              decoration: const InputDecoration(labelText: 'アバターURL'),
             ),
             const SizedBox(height: 24),
             _loading
