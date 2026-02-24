@@ -15,8 +15,31 @@ String get _apiBaseUrl {
   return 'http://localhost:5001';
 }
 
-void main() {
-  runApp(const BbsApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final userStr = prefs.getString('user');
+  if (userStr != null) {
+    final user = jsonDecode(userStr) as Map<String, dynamic>;
+    runApp(BbsAppWithUser(user: user));
+  } else {
+    runApp(const BbsApp());
+  }
+}
+
+class BbsAppWithUser extends StatelessWidget {
+  final Map<String, dynamic> user;
+  const BbsAppWithUser({super.key, required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: '掲示板',
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      home: BbsHomePage(user: user),
+    );
+  }
 }
 
 class BbsApp extends StatefulWidget {
@@ -155,6 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (res.statusCode == 200) {
         final user = jsonDecode(res.body) as Map<String, dynamic>;
+        // ユーザー情報を永続化
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user', jsonEncode(user));
         if (!mounted) {
           return;
         }
@@ -485,6 +511,12 @@ class _BbsHomePageState extends State<BbsHomePage> {
     _loadLastSeen();
     _loadFavorites();
     _loadThreads();
+    _saveUserToPrefs();
+  }
+
+  Future<void> _saveUserToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user', jsonEncode(_currentUser));
   }
 
   Future<void> _loadLastSeen() async {
@@ -703,23 +735,36 @@ class _BbsHomePageState extends State<BbsHomePage> {
                     final title = titleController.text.trim();
                     final category = categoryController.text.trim();
                     if (title.isEmpty || category.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('タイトルとカテゴリは必須です')),
+                      );
                       return;
                     }
-                    final url = Uri.parse('$_apiBaseUrl/api/threads');
-                    await http.post(
-                      url,
-                      headers: {'Content-Type': 'application/json'},
-                      body: jsonEncode({
-                        'title': title,
-                        'category': category,
-                        'createdBy': _currentUser['id'],
-                      }),
-                    ).timeout(_requestTimeout);
-                    if (!mounted) {
-                      return;
+                    try {
+                      final url = Uri.parse('$_apiBaseUrl/api/threads');
+                      final res = await http.post(
+                        url,
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({
+                          'title': title,
+                          'category': category,
+                          'createdBy': _currentUser['id'],
+                        }),
+                      ).timeout(_requestTimeout);
+                      if (!mounted) return;
+                      if (res.statusCode == 200) {
+                        Navigator.of(this.context).pop();
+                        await _loadThreads();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('投稿失敗: ${res.body.isNotEmpty ? res.body : 'サーバーエラー'}')),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('投稿エラー: $e')),
+                      );
                     }
-                    Navigator.of(this.context).pop();
-                    await _loadThreads();
                   },
                   child: const Text('作成'),
                 ),
@@ -733,34 +778,47 @@ class _BbsHomePageState extends State<BbsHomePage> {
 
   Future<void> _postComment() async {
     if (_threads.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('スレッドがありません')),
+      );
       return;
     }
     final text = _commentController.text.trim();
     if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('コメント内容は必須です')),
+      );
       return;
     }
-
-    final thread = _threads[_selectedThread];
-    final url = Uri.parse('$_apiBaseUrl/api/threads/comment');
-    final body = jsonEncode({
-      'threadId': thread['id'],
-      'userId': _currentUser['id'],
-      'content': text,
-      'parentCommentId': _replyTarget?['id'],
-    });
-
-    final res = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    ).timeout(_requestTimeout);
-
-    if (res.statusCode == 200) {
-      _commentController.clear();
-      setState(() {
-        _replyTarget = null;
+    try {
+      final thread = _threads[_selectedThread];
+      final url = Uri.parse('$_apiBaseUrl/api/threads/comment');
+      final body = jsonEncode({
+        'threadId': thread['id'],
+        'userId': _currentUser['id'],
+        'content': text,
+        'parentCommentId': _replyTarget?['id'],
       });
-      await _loadThreads();
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(_requestTimeout);
+      if (res.statusCode == 200) {
+        _commentController.clear();
+        setState(() {
+          _replyTarget = null;
+        });
+        await _loadThreads();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('コメント投稿失敗: ${res.body.isNotEmpty ? res.body : 'サーバーエラー'}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('コメント投稿エラー: $e')),
+      );
     }
   }
 
