@@ -61,11 +61,52 @@ class _BbsAppState extends State<BbsApp> {
     return MaterialApp(
       title: '掲示板サービス',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        colorScheme: ColorScheme.light(
+          primary: Colors.black,
+          secondary: Colors.grey.shade700,
+          surface: Colors.white,
+          background: Colors.grey.shade50,
+        ),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(color: Colors.grey.shade200, width: 1),
+          ),
+        ),
+        dividerTheme: DividerThemeData(color: Colors.grey.shade200, thickness: 1),
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo, brightness: Brightness.dark),
+        colorScheme: ColorScheme.dark(
+          primary: Colors.white,
+          secondary: Colors.grey.shade400,
+          surface: Colors.grey.shade900,
+          background: Colors.black,
+        ),
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          color: Colors.grey.shade900,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(color: Colors.grey.shade800, width: 1),
+          ),
+        ),
+        dividerTheme: DividerThemeData(color: Colors.grey.shade800, thickness: 1),
         useMaterial3: true,
       ),
       themeMode: _themeMode,
@@ -153,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Card(
             margin: const EdgeInsets.all(24),
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -185,9 +226,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 20),
                   _loading
                       ? const CircularProgressIndicator()
-                      : ElevatedButton(
-                          onPressed: _submit,
-                          child: const Text('ログイン'),
+                      : SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 0,
+                            ),
+                            child: const Text('ログイン', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          ),
                         ),
                   TextButton(
                     onPressed: () {
@@ -196,6 +249,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         MaterialPageRoute(builder: (_) => const RegisterScreen()),
                       );
                     },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade700,
+                    ),
                     child: const Text('新規登録はこちら'),
                   ),
                 ],
@@ -330,7 +388,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Card(
             margin: const EdgeInsets.all(24),
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -372,7 +430,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 20),
                   _loading
                       ? const CircularProgressIndicator()
-                      : ElevatedButton(onPressed: _register, child: const Text('登録する')),
+                      : SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 0,
+                            ),
+                            child: const Text('登録する', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          ),
+                        ),
                 ],
               ),
             ),
@@ -730,7 +803,15 @@ class _BbsHomePageState extends State<BbsHomePage> {
             decoration: const InputDecoration(hintText: 'コメント内容'),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade400
+                    : Colors.grey.shade700,
+              ),
+              child: const Text('キャンセル'),
+            ),
             ElevatedButton(
               onPressed: () {
                 final text = controller.text.trim();
@@ -738,7 +819,14 @@ class _BbsHomePageState extends State<BbsHomePage> {
                   Navigator.pop(context, text);
                 }
               },
-              child: const Text('保存'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                elevation: 0,
+              ),
+              child: const Text('保存', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -770,11 +858,25 @@ class _BbsHomePageState extends State<BbsHomePage> {
           title: const Text('コメントを削除'),
           content: const Text('このコメントを削除しますか？\n内容は「[削除されました]」に置き換えられます。'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('キャンセル')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade400
+                    : Colors.grey.shade700,
+              ),
+              child: const Text('キャンセル'),
+            ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('削除'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                elevation: 0,
+              ),
+              child: const Text('削除', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -845,7 +947,8 @@ class _BbsHomePageState extends State<BbsHomePage> {
         actions: [
           IconButton(
             icon: Icon(
-              Theme.of(context).brightness == Brightness.dark ? Icons.light_mode : Icons.dark_mode,
+              Theme.of(context).brightness == Brightness.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              size: 20,
             ),
             onPressed: () {
               BbsApp.of(context)?.toggleThemeMode();
@@ -853,11 +956,12 @@ class _BbsHomePageState extends State<BbsHomePage> {
             tooltip: 'ダークモード切替',
           ),
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_circle_outline, size: 22),
             onPressed: _openCreateThreadDialog,
+            tooltip: '新規スレッド',
           ),
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined, size: 22),
             onPressed: () async {
               final updated = await Navigator.push<Map<String, dynamic>>(
                 context,
@@ -881,23 +985,51 @@ class _BbsHomePageState extends State<BbsHomePage> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Column(
                           children: [
                             TextField(
                               controller: _searchTitleController,
-                              decoration: const InputDecoration(
-                                labelText: 'スレッド名検索',
-                                prefixIcon: Icon(Icons.search),
+                              decoration: InputDecoration(
+                                hintText: 'スレッド名で検索',
+                                prefixIcon: const Icon(Icons.search, size: 20),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                filled: true,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade900
+                                    : Colors.grey.shade50,
                               ),
+                              style: const TextStyle(fontSize: 13),
                             ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _searchBodyController,
-                              decoration: const InputDecoration(
-                                labelText: '本文検索',
-                                prefixIcon: Icon(Icons.text_fields),
+                              decoration: InputDecoration(
+                                hintText: '本文で検索',
+                                prefixIcon: const Icon(Icons.text_fields, size: 20),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                filled: true,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade900
+                                    : Colors.grey.shade50,
                               ),
+                              style: const TextStyle(fontSize: 13),
                             ),
                             const SizedBox(height: 8),
                             Row(
@@ -917,10 +1049,21 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                         });
                                       }
                                     },
-                                    icon: const Icon(Icons.calendar_today),
-                                    label: Text(_searchDate == null
-                                        ? '日付指定'
-                                        : '${_searchDate!.year}/${_searchDate!.month}/${_searchDate!.day}'),
+                                    icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                                    label: Text(
+                                      _searchDate == null
+                                          ? '日付指定'
+                                          : '${_searchDate!.year}/${_searchDate!.month}/${_searchDate!.day}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                      side: BorderSide(
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey.shade700
+                                            : Colors.grey.shade300,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 IconButton(
@@ -929,7 +1072,8 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                       _searchDate = null;
                                     });
                                   },
-                                  icon: const Icon(Icons.clear),
+                                  icon: const Icon(Icons.close, size: 18),
+                                  tooltip: 'クリア',
                                 ),
                               ],
                             ),
@@ -961,14 +1105,20 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                   Expanded(child: Text('${item['title']}')),
                                   if (unreadCount > 0)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        borderRadius: BorderRadius.circular(12),
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.blue.shade700
+                                            : Colors.blue.shade500,
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
                                         '$unreadCount',
-                                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -976,8 +1126,15 @@ class _BbsHomePageState extends State<BbsHomePage> {
                               subtitle: Text('[${item['category']}] $commentCount件  ${_formatDateTime(item['createdAt'] as DateTime)}'),
                               trailing: IconButton(
                                 icon: Icon(
-                                  isFavorite ? Icons.star : Icons.star_border,
-                                  color: isFavorite ? Colors.amber : null,
+                                  isFavorite ? Icons.star : Icons.star_outline,
+                                  color: isFavorite
+                                      ? (Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.yellow.shade600
+                                          : Colors.amber.shade700)
+                                      : (Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade600
+                                          : Colors.grey.shade400),
+                                  size: 20,
                                 ),
                                 onPressed: () => _toggleFavorite(threadId),
                               ),
@@ -995,7 +1152,7 @@ class _BbsHomePageState extends State<BbsHomePage> {
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     child: hasThreads
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1035,8 +1192,12 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                               child: Container(
                                                 padding: const EdgeInsets.all(10),
                                                 decoration: BoxDecoration(
-                                                  color: isMe ? Colors.indigo.shade100 : Colors.grey.shade100,
-                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: Theme.of(context).brightness == Brightness.dark
+                                                        ? Colors.grey.shade800
+                                                        : Colors.grey.shade200,
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(6),
                                                 ),
                                                 child: Column(
                                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1055,20 +1216,31 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                                       ],
                                                     ),
                                                     if (quoted != null) ...[
-                                                      const SizedBox(height: 6),
+                                                      const SizedBox(height: 8),
                                                       Container(
                                                         width: double.infinity,
-                                                        padding: const EdgeInsets.all(8),
+                                                        padding: const EdgeInsets.all(10),
                                                         decoration: BoxDecoration(
-                                                          color: Colors.white,
-                                                          border: Border.all(color: Colors.grey.shade300),
-                                                          borderRadius: BorderRadius.circular(8),
+                                                          color: Theme.of(context).brightness == Brightness.dark
+                                                              ? Colors.grey.shade900
+                                                              : Colors.grey.shade50,
+                                                          border: Border.all(
+                                                            color: Theme.of(context).brightness == Brightness.dark
+                                                                ? Colors.grey.shade700
+                                                                : Colors.grey.shade300,
+                                                          ),
+                                                          borderRadius: BorderRadius.circular(5),
                                                         ),
                                                         child: Text(
-                                                          '引用: ${quoted['content']}',
+                                                          '${quoted['content']}',
                                                           maxLines: 2,
                                                           overflow: TextOverflow.ellipsis,
-                                                          style: TextStyle(color: Colors.grey.shade700),
+                                                          style: TextStyle(
+                                                            color: Theme.of(context).brightness == Brightness.dark
+                                                                ? Colors.grey.shade500
+                                                                : Colors.grey.shade600,
+                                                            fontSize: 12,
+                                                          ),
                                                         ),
                                                       ),
                                                     ],
@@ -1086,18 +1258,35 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                                               _replyTarget = c;
                                                             });
                                                           },
+                                                          style: TextButton.styleFrom(
+                                                            foregroundColor: Theme.of(context).brightness == Brightness.dark
+                                                                ? Colors.grey.shade400
+                                                                : Colors.grey.shade700,
+                                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                            textStyle: const TextStyle(fontSize: 12),
+                                                          ),
                                                           child: const Text('返信'),
                                                         ),
                                                         if (isMe) ...[
                                                           IconButton(
-                                                            icon: const Icon(Icons.edit, size: 18),
+                                                            icon: const Icon(Icons.edit_outlined, size: 16),
                                                             onPressed: () => _editComment(c),
                                                             tooltip: '編集',
+                                                            padding: const EdgeInsets.all(4),
+                                                            constraints: const BoxConstraints(),
+                                                            color: Theme.of(context).brightness == Brightness.dark
+                                                                ? Colors.grey.shade500
+                                                                : Colors.grey.shade600,
                                                           ),
                                                           IconButton(
-                                                            icon: const Icon(Icons.delete, size: 18),
+                                                            icon: const Icon(Icons.delete_outline, size: 16),
                                                             onPressed: () => _deleteComment(c),
                                                             tooltip: '削除',
+                                                            padding: const EdgeInsets.all(4),
+                                                            constraints: const BoxConstraints(),
+                                                            color: Theme.of(context).brightness == Brightness.dark
+                                                                ? Colors.grey.shade500
+                                                                : Colors.grey.shade600,
                                                           ),
                                                         ],
                                                         _ReactionChip(
@@ -1131,11 +1320,17 @@ class _BbsHomePageState extends State<BbsHomePage> {
                               if (_replyTarget != null)
                                 Container(
                                   margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                                   decoration: BoxDecoration(
-                                    color: Colors.amber.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.amber.shade200),
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey.shade900
+                                        : Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade800
+                                          : Colors.grey.shade300,
+                                    ),
                                   ),
                                   child: Row(
                                     children: [
@@ -1144,6 +1339,12 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                           '返信先: ${_replyTarget!['content']}',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.grey.shade400
+                                                : Colors.grey.shade600,
+                                          ),
                                         ),
                                       ),
                                       IconButton(
@@ -1152,7 +1353,9 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                             _replyTarget = null;
                                           });
                                         },
-                                        icon: const Icon(Icons.close),
+                                        icon: const Icon(Icons.close, size: 16),
+                                        padding: const EdgeInsets.all(4),
+                                        constraints: const BoxConstraints(),
                                       ),
                                     ],
                                   ),
@@ -1162,13 +1365,52 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                   Expanded(
                                     child: TextField(
                                       controller: _commentController,
-                                      decoration: const InputDecoration(hintText: '書き込み内容を入力...'),
+                                      decoration: InputDecoration(
+                                        hintText: 'コメントを入力...',
+                                        hintStyle: TextStyle(
+                                          fontSize: 13,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.grey.shade600
+                                              : Colors.grey.shade400,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                          borderSide: BorderSide(
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.grey.shade700
+                                                : Colors.grey.shade300,
+                                          ),
+                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                        filled: true,
+                                        fillColor: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey.shade900
+                                            : Colors.grey.shade50,
+                                      ),
+                                      style: const TextStyle(fontSize: 13),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 12),
                                   ElevatedButton(
                                     onPressed: _postComment,
-                                    child: const Text('投稿'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white
+                                          : Colors.black,
+                                      foregroundColor: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.black
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                      elevation: 0,
+                                    ),
+                                    child: const Text('投稿', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                                   ),
                                 ],
                               ),
@@ -1192,17 +1434,28 @@ class _ReactionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: count > 0
+              ? (isDark ? Colors.grey.shade800 : Colors.grey.shade100)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+          ),
         ),
-        child: Text('$label $count'),
+        child: Text(
+          '$label ${count > 0 ? count : ""}',
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+          ),
+        ),
       ),
     );
   }
