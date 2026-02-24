@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _apiBaseUrlFromEnv = String.fromEnvironment('API_BASE_URL', defaultValue: '');
 const _requestTimeout = Duration(seconds: 12);
@@ -18,8 +19,42 @@ void main() {
   runApp(const BbsApp());
 }
 
-class BbsApp extends StatelessWidget {
+class BbsApp extends StatefulWidget {
   const BbsApp({super.key});
+
+  @override
+  State<BbsApp> createState() => _BbsAppState();
+
+  static _BbsAppState? of(BuildContext context) {
+    return context.findAncestorStateOfType<_BbsAppState>();
+  }
+}
+
+class _BbsAppState extends State<BbsApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isDark = prefs.getBool('darkMode') ?? false;
+    setState(() {
+      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
+
+  Future<void> toggleThemeMode() async {
+    final isDark = _themeMode == ThemeMode.dark;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('darkMode', !isDark);
+    setState(() {
+      _themeMode = isDark ? ThemeMode.light : ThemeMode.dark;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +64,11 @@ class BbsApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo, brightness: Brightness.dark),
+        useMaterial3: true,
+      ),
+      themeMode: _themeMode,
       home: const LoginScreen(),
     );
   }
@@ -46,6 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _pwController = TextEditingController();
   String? _error;
   bool _loading = false;
+  bool _obscurePassword = true;
 
   Future<void> _submit() async {
     setState(() {
@@ -123,8 +164,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _pwController,
-                    decoration: const InputDecoration(labelText: 'パスワード'),
-                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'パスワード',
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                    obscureText: _obscurePassword,
                     onSubmitted: (_) => _submit(),
                   ),
                   if (_error != null) ...[
@@ -344,28 +395,102 @@ class BbsHomePage extends StatefulWidget {
 class _BbsHomePageState extends State<BbsHomePage> {
   final _commentController = TextEditingController();
   final _searchTitleController = TextEditingController();
+  final _searchBodyController = TextEditingController();
   late Map<String, dynamic> _currentUser;
   List<Map<String, dynamic>> _threads = [];
   int _selectedThread = 0;
   bool _loading = true;
   DateTime? _searchDate;
   Map<String, dynamic>? _replyTarget;
+  Map<int, DateTime> _lastSeenMap = {};
+  Set<int> _favoriteIds = {};
 
   @override
   void initState() {
     super.initState();
     _currentUser = Map<String, dynamic>.from(widget.user);
+    _loadLastSeen();
+    _loadFavorites();
     _loadThreads();
+  }
+
+  Future<void> _loadLastSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    final map = <int, DateTime>{};
+    for (final key in keys) {
+      if (key.startsWith('lastSeen_')) {
+        final threadId = int.tryParse(key.substring(9));
+        final timestamp = prefs.getInt(key);
+        if (threadId != null && timestamp != null) {
+          map[threadId] = DateTime.fromMillisecondsSinceEpoch(timestamp);
+        }
+      }
+    }
+    setState(() {
+      _lastSeenMap = map;
+    });
+  }
+
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('favorites') ?? [];
+    setState(() {
+      _favoriteIds = list.map((e) => int.tryParse(e)).whereType<int>().toSet();
+    });
+  }
+
+  Future<void> _toggleFavorite(int threadId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final newSet = Set<int>.from(_favoriteIds);
+    if (newSet.contains(threadId)) {
+      newSet.remove(threadId);
+    } else {
+      newSet.add(threadId);
+    }
+    await prefs.setStringList('favorites', newSet.map((e) => '$e').toList());
+    setState(() {
+      _favoriteIds = newSet;
+    });
+  }
+
+  Future<void> _markThreadAsSeen(int threadId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    await prefs.setInt('lastSeen_$threadId', now.millisecondsSinceEpoch);
+    setState(() {
+      _lastSeenMap[threadId] = now;
+    });
+  }
+
+  int _getUnreadCount(Map<String, dynamic> thread) {
+    final threadId = thread['id'] as int;
+    final lastSeen = _lastSeenMap[threadId];
+    if (lastSeen == null) {
+      return (thread['comments'] as List).length;
+    }
+    final comments = (thread['comments'] as List).cast<Map<String, dynamic>>();
+    return comments.where((c) {
+      final createdAt = c['createdAt'] as DateTime;
+      return createdAt.isAfter(lastSeen);
+    }).length;
   }
 
   Future<void> _loadThreads() async {
     setState(() => _loading = true);
     try {
       final titleQ = _searchTitleController.text.trim();
+      final bodyQ = _searchBodyController.text.trim();
       final dateQ = _searchDate != null
           ? '&date=${_searchDate!.year}-${_searchDate!.month.toString().padLeft(2, '0')}-${_searchDate!.day.toString().padLeft(2, '0')}'
           : '';
-      final query = titleQ.isNotEmpty ? '?title=$titleQ$dateQ' : (dateQ.isNotEmpty ? '?${dateQ.substring(1)}' : '');
+      
+      final params = <String>[];
+      if (titleQ.isNotEmpty) params.add('title=$titleQ');
+      if (bodyQ.isNotEmpty) params.add('body=$bodyQ');
+      if (dateQ.isNotEmpty) params.add(dateQ.substring(1));
+      
+      final query = params.isNotEmpty ? '?${params.join('&')}' : '';
       final url = Uri.parse('$_apiBaseUrl/api/threads$query');
       final res = await http.get(url).timeout(_requestTimeout);
       if (res.statusCode == 200) {
@@ -399,6 +524,15 @@ class _BbsHomePageState extends State<BbsHomePage> {
             'comments': comments,
           };
         }).toList();
+
+        // お気に入りを先頭に並べる
+        mapped.sort((a, b) {
+          final aFav = _favoriteIds.contains(a['id']);
+          final bFav = _favoriteIds.contains(b['id']);
+          if (aFav && !bFav) return -1;
+          if (!aFav && bFav) return 1;
+          return 0;
+        });
 
         setState(() {
           _threads = mapped;
@@ -583,6 +717,113 @@ class _BbsHomePageState extends State<BbsHomePage> {
     }
   }
 
+  Future<void> _editComment(Map<String, dynamic> comment) async {
+    final controller = TextEditingController(text: comment['content']?.toString() ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('コメントを編集'),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(hintText: 'コメント内容'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+            ElevatedButton(
+              onPressed: () {
+                final text = controller.text.trim();
+                if (text.isNotEmpty) {
+                  Navigator.pop(context, text);
+                }
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      final url = Uri.parse('$_apiBaseUrl/api/threads/comment/${comment['id']}');
+      final res = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': _currentUser['id'],
+          'content': result,
+        }),
+      ).timeout(_requestTimeout);
+
+      if (res.statusCode == 200) {
+        await _loadThreads();
+      }
+    }
+  }
+
+  Future<void> _deleteComment(Map<String, dynamic> comment) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('コメントを削除'),
+          content: const Text('このコメントを削除しますか？\n内容は「[削除されました]」に置き換えられます。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('キャンセル')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('削除'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      final url = Uri.parse('$_apiBaseUrl/api/threads/comment/${comment['id']}?userId=${_currentUser['id']}');
+      final res = await http.delete(url).timeout(_requestTimeout);
+
+      if (res.statusCode == 200) {
+        await _loadThreads();
+      }
+    }
+  }
+
+  Widget _buildCommentText(String content) {
+    final regex = RegExp(r'@(\w+)');
+    final matches = regex.allMatches(content);
+    
+    if (matches.isEmpty) {
+      return Text(content);
+    }
+
+    final spans = <TextSpan>[];
+    int lastEnd = 0;
+
+    for (final match in matches) {
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(text: content.substring(lastEnd, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(0),
+        style: const TextStyle(
+          color: Colors.blue,
+          fontWeight: FontWeight.bold,
+          decoration: TextDecoration.underline,
+        ),
+      ));
+      lastEnd = match.end;
+    }
+
+    if (lastEnd < content.length) {
+      spans.add(TextSpan(text: content.substring(lastEnd)));
+    }
+
+    return RichText(text: TextSpan(style: DefaultTextStyle.of(context).style, children: spans));
+  }
+
   String _formatDateTime(DateTime dt) {
     final y = dt.year.toString();
     final m = dt.month.toString().padLeft(2, '0');
@@ -602,6 +843,15 @@ class _BbsHomePageState extends State<BbsHomePage> {
       appBar: AppBar(
         title: const Text('掲示板'),
         actions: [
+          IconButton(
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark ? Icons.light_mode : Icons.dark_mode,
+            ),
+            onPressed: () {
+              BbsApp.of(context)?.toggleThemeMode();
+            },
+            tooltip: 'ダークモード切替',
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _openCreateThreadDialog,
@@ -639,6 +889,14 @@ class _BbsHomePageState extends State<BbsHomePage> {
                               decoration: const InputDecoration(
                                 labelText: 'スレッド名検索',
                                 prefixIcon: Icon(Icons.search),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _searchBodyController,
+                              decoration: const InputDecoration(
+                                labelText: '本文検索',
+                                prefixIcon: Icon(Icons.text_fields),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -692,13 +950,40 @@ class _BbsHomePageState extends State<BbsHomePage> {
                           itemCount: _threads.length,
                           itemBuilder: (context, index) {
                             final item = _threads[index];
+                            final threadId = item['id'] as int;
                             final commentCount = (item['comments'] as List?)?.length ?? 0;
+                            final unreadCount = _getUnreadCount(item);
+                            final isFavorite = _favoriteIds.contains(threadId);
                             return ListTile(
                               selected: _selectedThread == index,
-                              title: Text('${item['title']}'),
+                              title: Row(
+                                children: [
+                                  Expanded(child: Text('${item['title']}')),
+                                  if (unreadCount > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '$unreadCount',
+                                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      ),
+                                    ),
+                                ],
+                              ),
                               subtitle: Text('[${item['category']}] $commentCount件  ${_formatDateTime(item['createdAt'] as DateTime)}'),
+                              trailing: IconButton(
+                                icon: Icon(
+                                  isFavorite ? Icons.star : Icons.star_border,
+                                  color: isFavorite ? Colors.amber : null,
+                                ),
+                                onPressed: () => _toggleFavorite(threadId),
+                              ),
                               onTap: () {
                                 setState(() => _selectedThread = index);
+                                _markThreadAsSeen(threadId);
                               },
                             );
                           },
@@ -788,7 +1073,7 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                                       ),
                                                     ],
                                                     const SizedBox(height: 6),
-                                                    Text('${c['content']}'),
+                                                    _buildCommentText('${c['content']}'),
                                                     const SizedBox(height: 8),
                                                     Wrap(
                                                       spacing: 8,
@@ -803,6 +1088,18 @@ class _BbsHomePageState extends State<BbsHomePage> {
                                                           },
                                                           child: const Text('返信'),
                                                         ),
+                                                        if (isMe) ...[
+                                                          IconButton(
+                                                            icon: const Icon(Icons.edit, size: 18),
+                                                            onPressed: () => _editComment(c),
+                                                            tooltip: '編集',
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(Icons.delete, size: 18),
+                                                            onPressed: () => _deleteComment(c),
+                                                            tooltip: '削除',
+                                                          ),
+                                                        ],
                                                         _ReactionChip(
                                                           label: '👍',
                                                           count: reactions['👍'] ?? 0,
@@ -922,12 +1219,23 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _nameController;
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
   bool _loading = false;
+  bool _showPasswordSection = false;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.user['displayName']?.toString() ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -967,6 +1275,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _changePassword() async {
+    final currentPw = _currentPasswordController.text.trim();
+    final newPw = _newPasswordController.text.trim();
+
+    if (currentPw.isEmpty || newPw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('現在のパスワードと新しいパスワードを入力してください')),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+    final url = Uri.parse('$_apiBaseUrl/api/auth/change-password');
+    final body = jsonEncode({
+      'id': widget.user['id'],
+      'currentPassword': currentPw,
+      'newPassword': newPw,
+    });
+
+    try {
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(_requestTimeout);
+
+      if (!mounted) {
+        return;
+      }
+
+      if (res.statusCode == 200) {
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        setState(() {
+          _showPasswordSection = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('パスワードを変更しました')),
+        );
+      } else {
+        final errorMsg = res.body.isNotEmpty ? res.body : 'パスワード変更に失敗しました';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg)),
+        );
+      }
+    } on TimeoutException {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('タイムアウトしました')),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('エラー: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -974,6 +1348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
               controller: _nameController,
@@ -983,6 +1358,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _loading
                 ? const CircularProgressIndicator()
                 : ElevatedButton(onPressed: _save, child: const Text('保存')),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _showPasswordSection = !_showPasswordSection;
+                });
+              },
+              icon: Icon(_showPasswordSection ? Icons.expand_less : Icons.expand_more),
+              label: const Text('パスワードを変更'),
+            ),
+            if (_showPasswordSection) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _currentPasswordController,
+                decoration: const InputDecoration(labelText: '現在のパスワード'),
+                obscureText: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _newPasswordController,
+                decoration: const InputDecoration(labelText: '新しいパスワード'),
+                obscureText: true,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loading ? null : _changePassword,
+                child: const Text('パスワードを変更'),
+              ),
+            ],
           ],
         ),
       ),

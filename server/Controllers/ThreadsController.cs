@@ -23,7 +23,7 @@ namespace Server.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetThreads([FromQuery] string? title, [FromQuery] DateTime? date)
+        public async Task<IActionResult> GetThreads([FromQuery] string? title, [FromQuery] DateTime? date, [FromQuery] string? body)
         {
             var query = _db.Threads
                 .Include(t => t.Comments)
@@ -39,6 +39,12 @@ namespace Server.Controllers
             {
                 var day = date.Value.Date;
                 query = query.Where(t => t.CreatedAt >= day && t.CreatedAt < day.AddDays(1));
+            }
+
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                var q = body.Trim();
+                query = query.Where(t => t.Comments != null && t.Comments.Any(c => c.Content.Contains(q)));
             }
 
             var threads = await query
@@ -238,6 +244,44 @@ namespace Server.Controllers
             return Ok(grouped);
         }
 
+        [HttpPut("comment/{id}")]
+        public async Task<IActionResult> UpdateComment(int id, [FromBody] UpdateCommentRequest req)
+        {
+            var comment = await _db.Comments.FindAsync(id);
+            if (comment == null)
+            {
+                return NotFound();
+            }
+
+            if (comment.UserId != req.UserId)
+            {
+                return Forbid();
+            }
+
+            comment.Content = req.Content;
+            await _db.SaveChangesAsync();
+            return Ok(new { comment.Id, comment.Content });
+        }
+
+        [HttpDelete("comment/{id}")]
+        public async Task<IActionResult> DeleteComment(int id, [FromQuery] int userId)
+        {
+            var comment = await _db.Comments.FindAsync(id);
+            if (comment == null)
+            {
+                return NotFound();
+            }
+
+            if (comment.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            comment.Content = "[削除されました]";
+            await _db.SaveChangesAsync();
+            return Ok();
+        }
+
         private static IEnumerable<string> BuildFallbackSuggestions(string input)
         {
             var lower = input.ToLowerInvariant();
@@ -268,4 +312,5 @@ namespace Server.Controllers
     public class CreateThreadRequest { public string Title { get; set; } = string.Empty; public string Category { get; set; } = string.Empty; public int CreatedBy { get; set; } }
     public class PostCommentRequest { public int ThreadId { get; set; } public int UserId { get; set; } public string Content { get; set; } = string.Empty; public int? ParentCommentId { get; set; } }
     public class PostReactionRequest { public int CommentId { get; set; } public int UserId { get; set; } public string ReactionType { get; set; } = string.Empty; }
+    public class UpdateCommentRequest { public int UserId { get; set; } public string Content { get; set; } = string.Empty; }
 }

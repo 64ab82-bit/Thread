@@ -81,6 +81,27 @@ namespace Server.Controllers
             return Ok(new { user.Id, user.DisplayName, user.AvatarUrl });
         }
 
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+        {
+            var user = await _db.Users.FindAsync(req.Id);
+            if (user == null) return NotFound();
+            
+            if (!VerifyPassword(req.CurrentPassword, user.PasswordHash))
+            {
+                return BadRequest("現在のパスワードが正しくありません");
+            }
+
+            if (string.IsNullOrWhiteSpace(req.NewPassword))
+            {
+                return BadRequest("新しいパスワードを入力してください");
+            }
+
+            user.PasswordHash = HashPasswordPbkdf2(req.NewPassword);
+            await _db.SaveChangesAsync();
+            return Ok(new { message = "パスワードを変更しました" });
+        }
+
         private static string HashPasswordLegacy(string password)
         {
             using var sha256 = SHA256.Create();
@@ -151,5 +172,11 @@ namespace Server.Controllers
         public int Id { get; set; }
         public string? DisplayName { get; set; }
         public string? AvatarUrl { get; set; }
+    }
+    public class ChangePasswordRequest
+    {
+        public int Id { get; set; }
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 }
