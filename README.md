@@ -12,6 +12,7 @@ A few resources to get you started if this is your first Flutter project:
 
 - Push to `main` triggers GitHub Actions workflow: `.github/workflows/deploy.yml`
 - The Flutter web app is deployed to GitHub Pages automatically
+- The API (`server/Server.csproj`) is also built on GitHub Actions (Windows runner) and uploaded as artifact `api-win-x64`
 - Public URL: https://64ab82-bit.github.io/Thread/
 
 If this URL returns 404 initially, open repository Settings > Pages and ensure Source is set to GitHub Actions.
@@ -31,13 +32,15 @@ cd <repo>\server\deploy\windows
 ```
 
 4. Open Windows Firewall for TCP `5001`.
-5. Set GitHub Actions variable `API_BASE_URL` to:
+5. (Recommended) Set GitHub Actions variable `API_BASE_URL` to:
 
 ```text
 http://100.115.193.33:5001
 ```
 
 6. Push to `main` to redeploy web.
+
+If `API_BASE_URL` is not set, workflow still succeeds and builds web with fallback `http://localhost:5001`.
 
 Remove startup task:
 
