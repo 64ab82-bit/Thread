@@ -5,6 +5,7 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:workspace/main.dart';
@@ -13,7 +14,7 @@ void main() {
   testWidgets('login screen smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const BbsApp());
 
-    expect(find.text('ログイン'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'ログイン'), findsOneWidget);
     expect(find.text('ユーザーID'), findsOneWidget);
   });
 }
