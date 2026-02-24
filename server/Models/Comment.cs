@@ -8,10 +8,13 @@ namespace Server.Models
     {
         [Key]
         public int Id { get; set; }
+        [ForeignKey("DiscussionThread")]
         public int ThreadId { get; set; }
         public int UserId { get; set; }
         public string Content { get; set; } = string.Empty;
         public int? ParentCommentId { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public DiscussionThread? DiscussionThread { get; set; }
     }
 }

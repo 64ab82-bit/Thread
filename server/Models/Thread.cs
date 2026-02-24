@@ -14,6 +14,7 @@ namespace Server.Models
         public string Category { get; set; } = string.Empty;
         public int CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; }
+        [InverseProperty("DiscussionThread")]
         public List<Comment>? Comments { get; set; }
     }
 }
