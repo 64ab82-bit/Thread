@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpClient();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -25,6 +26,12 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<Server.Data.AppDbContext>();
     db.Database.EnsureCreated();
+    db.Database.ExecuteSqlRaw(@"
+IF COL_LENGTH('Threads', 'Category') IS NULL
+BEGIN
+    ALTER TABLE Threads ADD Category nvarchar(200) NOT NULL CONSTRAINT DF_Threads_Category DEFAULT '';
+END
+");
 }
 
 if (app.Environment.IsDevelopment())

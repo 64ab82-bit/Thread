@@ -11,6 +11,7 @@ namespace Server.Models
         public int Id { get; set; }
         [Required]
         public string Title { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
         public int CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<Comment>? Comments { get; set; }
