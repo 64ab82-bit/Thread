@@ -12,7 +12,7 @@ String get _apiBaseUrl {
   if (_apiBaseUrlFromEnv.isNotEmpty) {
     return _apiBaseUrlFromEnv;
   }
-  return 'https://localhost:5001';
+  return 'http://100.115.193.33:5002';
 }
 
 void main() async {
